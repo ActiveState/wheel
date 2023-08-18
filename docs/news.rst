@@ -1,6 +1,10 @@
 Release Notes
 =============
 
+**0.37.1.1 (2023-08-18)**
+
+-  Fixed parsing of wheel file names with multiple platform tags Fixes #485.
+
 **0.37.1 (2021-12-22)**
 
 - Fixed ``wheel pack`` duplicating the ``WHEEL`` contents when the build number has changed (#415)
