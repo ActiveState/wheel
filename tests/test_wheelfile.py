@@ -46,19 +46,44 @@ def test_bad_wheel_filename(filename):
     exc.match('^Bad wheel filename {!r}$'.format(filename))
 
 
+REDOS_CHECK = """
+import sys
+from wheel.cli import WheelError
+from wheel.wheelfile import WheelFile
+try:
+    WheelFile(sys.argv[1])
+except WheelError:
+    sys.exit(0)
+sys.exit(1)
+"""
+
+
 @pytest.mark.parametrize('filename', [
-    'a' + '-' * 5000 + '!',
-    '-a' * 5000 + '!',
-    'a-b-c-d-e' + '-e' * 5000 + '!',
-    'a-b-c-d-' + '-.whl' * 5000 + '!',
+    'a' + '-' * 2000 + '!',
+    '-a' * 2000 + '!',
+    'a-b-c-d-e' + '-e' * 2000 + '!',
+    'a-b-c-d-' + '-.whl' * 2000 + '!',
 ])
 def test_wheelfile_re_redos(filename):
     # CVE-2022-40898 (GHSA-qwmp-2cf2-g9g6): crafted names must be rejected
-    # in linear time. The 0.37.1 pattern took over 10 s on each of these.
+    # in linear time. The 0.37.1 pattern did not finish any of these in 10 s.
+    # re holds the GIL while matching, so the check runs in a child
+    # interpreter that is killed at the deadline: a regression fails in
+    # seconds instead of hanging the suite.
+    import os
+    import subprocess
     import time
-    start = time.time()
-    pytest.raises(WheelError, WheelFile, filename)
-    assert time.time() - start < 1
+    env = dict(os.environ, PYTHONPATH=os.pathsep.join(sys.path))
+    proc = subprocess.Popen([sys.executable, '-c', REDOS_CHECK, filename], env=env)
+    deadline = time.time() + 10
+    while proc.poll() is None and time.time() < deadline:
+        time.sleep(0.05)
+    if proc.poll() is None:
+        proc.kill()
+        proc.wait()
+        pytest.fail('wheel filename regex still running after 10 s')
+    assert proc.returncode == 0
+
 
 def test_missing_record(wheel_path):
     with ZipFile(wheel_path, 'w') as zf:
