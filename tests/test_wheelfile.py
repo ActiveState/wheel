@@ -45,6 +45,21 @@ def test_bad_wheel_filename(filename):
     exc = pytest.raises(WheelError, WheelFile, filename)
     exc.match('^Bad wheel filename {!r}$'.format(filename))
 
+
+@pytest.mark.parametrize('filename', [
+    'a' + '-' * 5000 + '!',
+    '-a' * 5000 + '!',
+    'a-b-c-d-e' + '-e' * 5000 + '!',
+    'a-b-c-d-' + '-.whl' * 5000 + '!',
+])
+def test_wheelfile_re_redos(filename):
+    # CVE-2022-40898 (GHSA-qwmp-2cf2-g9g6): crafted names must be rejected
+    # in linear time. The 0.37.1 pattern took over 10 s on each of these.
+    import time
+    start = time.time()
+    pytest.raises(WheelError, WheelFile, filename)
+    assert time.time() - start < 1
+
 def test_missing_record(wheel_path):
     with ZipFile(wheel_path, 'w') as zf:
         zf.writestr(native('hello/héllö.py'), as_bytes('print("Héllö, w0rld!")\n'))
