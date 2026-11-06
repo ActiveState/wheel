@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+**0.37.1.post2 (2026-11-06)**
+
+- ActiveState security release for Python 2.7. The package version is now
+  ``0.37.1.post2``: 0.37.1.1 carried the CVE-2022-40898 (GHSA-qwmp-2cf2-g9g6)
+  fix but still reported ``0.37.1``, so scanners matched the unfixed upstream
+  release.
+- Added a regression test for the CVE-2022-40898 filename ReDoS.
+
 **0.37.1.1 (2023-08-18)**
 
 -  Fixed parsing of wheel file names with multiple platform tags Fixes #485.
